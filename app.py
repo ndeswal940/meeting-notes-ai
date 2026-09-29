@@ -14,39 +14,55 @@ st.write(
     "Transform unstructured meeting notes or transcripts into structured key decisions, high-level summaries, and action-item matrices."
 )
 
-# Fetch API key directly from Streamlit Secrets
+# Retrieve API key securely from Streamlit Secrets
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
-# Initialize Groq Client & Fetch Active Models
-available_models = []
+# Active production models on Groq (Updated to exclude decommissioned models)
+PRODUCTION_TEXT_MODELS = [
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+]
+
+# Fetch active models dynamically while filtering out guardrail & audio models
+active_models = []
 if groq_api_key:
     try:
         client = Groq(api_key=groq_api_key)
-        # Dynamic lookup of active models
         models_data = client.models.list()
-        available_models = [
+
+        fetched = [
             m.id
             for m in models_data.data
-            if "llama" in m.id.lower() or "mixtral" in m.id.lower()
+            if not any(
+                excluded in m.id.lower()
+                for excluded in [
+                    "guard",
+                    "whisper",
+                    "orpheus",
+                    "safeguard",
+                    "vision",
+                    "3.1-8b-instant",
+                ]
+            )
         ]
-    except Exception as e:
-        st.sidebar.error(f"Error initializing Groq: {str(e)}")
+        if fetched:
+            active_models = sorted(
+                fetched, key=lambda x: x not in PRODUCTION_TEXT_MODELS
+            )
+    except Exception:
+        pass
 
-# Fallback models if dynamic fetch fails
-if not available_models:
-    available_models = [
-        "llama-3.3-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768",
-    ]
+if not active_models:
+    active_models = PRODUCTION_TEXT_MODELS
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
 
 model_option = st.sidebar.selectbox(
     "Select AI Model:",
-    available_models,
+    active_models,
+    index=0,
 )
 
 # Load Sample Data Button
@@ -59,7 +75,7 @@ if st.sidebar.button("📄 Load Sample Transcript"):
         "the Groq API integration by tomorrow evening. Priya agreed to draft the "
         "end-term project report covering Sections A through E by Wednesday 5 PM.\n\n"
         "Decisions made:\n"
-        "1. We will use Groq API with Llama 3 models for fast processing.\n"
+        "1. We will use Groq API with Llama 3.3 / GPT-OSS models for fast processing.\n"
         "2. Streamlit Community Cloud will be used for hosting."
     )
 
@@ -80,7 +96,7 @@ if st.button("🚀 Summarize & Extract Action Items"):
             "⚠️ Input is too short. Please enter a valid transcript (at least 30 characters)."
         )
     else:
-        with st.spinner("Processing meeting transcript using Groq API..."):
+        with st.spinner(f"Processing transcript using {model_option}..."):
             try:
                 client = Groq(api_key=groq_api_key)
 
