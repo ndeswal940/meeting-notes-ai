@@ -14,17 +14,11 @@ st.write(
     "Transform unstructured meeting notes or transcripts into structured key decisions, high-level summaries, and action-item matrices."
 )
 
+# Fetch API key directly from Streamlit Secrets
+groq_api_key = st.secrets.get("GROQ_API_KEY", "")
+
 # Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
-
-# Retrieve API key securely from Streamlit Secrets or manual user input
-default_api_key = st.secrets.get("GROQ_API_KEY", "")
-groq_api_key = st.sidebar.text_input(
-    "Enter Groq API Key:",
-    value=default_api_key,
-    type="password",
-    help="Key is securely auto-loaded from app secrets if configured.",
-)
 
 # Model selection
 model_option = st.sidebar.selectbox(
@@ -57,7 +51,7 @@ raw_text = st.text_area(
 # Run Button
 if st.button("🚀 Summarize & Extract Action Items"):
     if not groq_api_key:
-        st.error("⚠️ Please enter your Groq API Key in the sidebar or configure app secrets.")
+        st.error("⚠️ GROQ_API_KEY is missing in App Secrets.")
     elif len(raw_text.strip()) < 30:
         st.warning(
             "⚠️ Input is too short. Please enter a valid transcript (at least 30 characters)."
