@@ -17,13 +17,36 @@ st.write(
 # Fetch API key directly from Streamlit Secrets
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
+# Initialize Groq Client & Fetch Active Models
+available_models = []
+if groq_api_key:
+    try:
+        client = Groq(api_key=groq_api_key)
+        # Dynamic lookup of active models
+        models_data = client.models.list()
+        available_models = [
+            m.id
+            for m in models_data.data
+            if "llama" in m.id.lower() or "mixtral" in m.id.lower()
+        ]
+    except Exception as e:
+        st.sidebar.error(f"Error initializing Groq: {str(e)}")
+
+# Fallback models if dynamic fetch fails
+if not available_models:
+    available_models = [
+        "llama-3.3-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+    ]
+
 # Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
 
-# Model selection
 model_option = st.sidebar.selectbox(
     "Select AI Model:",
-    ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+    available_models,
 )
 
 # Load Sample Data Button
@@ -36,7 +59,7 @@ if st.sidebar.button("📄 Load Sample Transcript"):
         "the Groq API integration by tomorrow evening. Priya agreed to draft the "
         "end-term project report covering Sections A through E by Wednesday 5 PM.\n\n"
         "Decisions made:\n"
-        "1. We will use Groq API with llama-3.3-70b for fast processing.\n"
+        "1. We will use Groq API with Llama 3 models for fast processing.\n"
         "2. Streamlit Community Cloud will be used for hosting."
     )
 
